@@ -7,7 +7,7 @@ use std::io::{Read, Error, ErrorKind, stdin, stdout};
 
 use clap::{Arg, App};
 
-use genetic_bf::{Config, VM, generate_program};
+use genetic_bf::{Config, VM, VMResult, generate_program};
 
 fn main() {
     let args = App::new("genetic-bf")
@@ -31,8 +31,11 @@ fn main() {
         Ok(file) => {
             if args.is_present("run") {
                 let prog: Vec<u8> = file.bytes().collect::<Result<Vec<u8>, Error>>().unwrap();
-                let mut vm = VM::new(prog, stdin, stdout);
-                vm.run();
+                let mut vm = VM::new(prog, stdin(), stdout());
+                match vm.run() {
+                    VMResult::Error(e) => panic!(e),
+                    VMResult::Ok => {}
+                }
             } else {
                 let config: Config = serde_yaml::from_reader(file).unwrap();
                 match generate_program(config) {

@@ -8,8 +8,8 @@ pub struct VM<I: Read, O: Write> {
     iptr: usize,
     dptr: usize,
     data: [u8; DATA_SIZE],
-    input: fn() -> I,
-    output: fn() -> O,
+    input: I,
+    output: O,
 }
 
 /// An action to be taken by the virtual machine after an instruction
@@ -21,9 +21,15 @@ enum VMAction {
     Ok,
 }
 
+/// The result of running the machine
+pub enum VMResult {
+    Error(&'static str),
+    Ok
+}
+
 impl <I: Read, O: Write> VM<I, O> {
     /// Create a new virtual machine for a program.
-    pub fn new(prog: Vec<u8>, input: fn() -> I, output: fn() -> O) -> Self {
+    pub fn new(prog: Vec<u8>, input: I, output: O) -> Self {
         VM {
             prog: prog,
             iptr: 0,
@@ -35,7 +41,7 @@ impl <I: Read, O: Write> VM<I, O> {
     }
 
     /// Run the virtual machine.
-    pub fn run(&mut self) {
+    pub fn run(&mut self) -> VMResult {
         loop {
             match self.step() {
                 VMAction::Ok => {
@@ -54,7 +60,7 @@ impl <I: Read, O: Write> VM<I, O> {
                                     _ => {}
                                 }
                             }
-                            None => panic!("No matching ]"),
+                            None => return VMResult::Error("No matching ]"),
                         }
 
                         self.iptr += 1;
@@ -73,16 +79,18 @@ impl <I: Read, O: Write> VM<I, O> {
                                     _ => {}
                                 }
                             }
-                            None => panic!("No matching ["),
+                            None => return VMResult::Error("No matching ["),
                         }
                     }
 
                     self.iptr += 1;
                 }
-                VMAction::Error(e) => panic!(e),
+                VMAction::Error(e) => return VMResult::Error(e),
                 VMAction::EOF => break,
             }
         }
+
+        VMResult::Ok
     }
 
     /// Process the next instruction in the program (as defined by the
@@ -113,14 +121,20 @@ impl <I: Read, O: Write> VM<I, O> {
                 '.' => {
                     let mut buf = [0; 1];
                     buf[0] = self.data[self.dptr];
-                    (self.output)().write(&buf).unwrap();
-                    VMAction::Ok
+                    if let Ok(_) = self.output.write(&buf) {
+                        VMAction::Ok
+                    } else {
+                        VMAction::Error("Unable to write output")
+                    }
                 }
                 ',' => {
                     let mut buf = [0; 1];
-                    (self.input)().take(1).read(&mut buf).unwrap();
-                    self.data[self.dptr] = buf[0];
-                    VMAction::Ok
+                    if let Ok(()) = self.input.read_exact(&mut buf) {
+                        self.data[self.dptr] = buf[0];
+                        VMAction::Ok
+                    } else {
+                        VMAction::Error("Unable to read input")
+                    }
                 }
                 '[' => {
                     if self.data[self.dptr] == 0 {
