@@ -2,7 +2,7 @@ extern crate genetic_bf;
 
 use std::env;
 use std::fs::File;
-use std::io::{Read, Error};
+use std::io::{Read, Error, stdin, stdout};
 use genetic_bf::run_program;
 
 fn main() {
@@ -13,7 +13,7 @@ fn main() {
             .and_then(|file| file.bytes().collect::<Result<Vec<u8>, Error>>());
 
         match prog {
-            Ok(prog) => run_program(prog),
+            Ok(prog) => run_program(prog, stdin, stdout),
             Err(e) => panic!("Unable to open file: {}", e),
         }
     }

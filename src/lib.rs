@@ -1,9 +1,10 @@
 mod vm;
 
+use std::io::{Read, Write};
 use vm::VM;
 
-pub fn run_program(prog: Vec<u8>) {
-    let mut vm = VM::new(prog);
+pub fn run_program<I, O>(prog: Vec<u8>, input: fn() -> I, output: fn() -> O) where I: Read, O: Write {
+    let mut vm = VM::new(prog, input, output);
     vm.run();
 }
 

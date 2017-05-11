@@ -1,14 +1,18 @@
-use std::io::{Read, Write, stdin, stdout};
+use std::io::{Read, Write};
 
 const DATA_SIZE: usize = 30000;
 
-pub struct VM {
+/// A virtual machine to run a program.
+pub struct VM<I: Read, O: Write> {
     prog: Vec<u8>,
     iptr: usize,
     dptr: usize,
     data: [u8; DATA_SIZE],
+    input: fn() -> I,
+    output: fn() -> O,
 }
 
+/// An action to be taken by the virtual machine after an instruction
 enum VMAction {
     EOF,
     Error(&'static str),
@@ -17,16 +21,20 @@ enum VMAction {
     Ok,
 }
 
-impl VM {
-    pub fn new(prog: Vec<u8>) -> Self {
+impl <I: Read, O: Write> VM<I, O> {
+    /// Create a new virtual machine for a program.
+    pub fn new(prog: Vec<u8>, input: fn() -> I, output: fn() -> O) -> Self {
         VM {
             prog: prog,
             iptr: 0,
             dptr: 0,
             data: [0; DATA_SIZE],
+            input: input,
+            output: output,
         }
     }
 
+    /// Run the virtual machine.
     pub fn run(&mut self) {
         loop {
             match self.step() {
@@ -77,6 +85,8 @@ impl VM {
         }
     }
 
+    /// Process the next instruction in the program (as defined by the
+    /// instruction pointer), returning the next action to be taken by the VM.
     fn step(&mut self) -> VMAction {
         if self.iptr >= self.prog.len() {
             return VMAction::EOF;
@@ -103,12 +113,12 @@ impl VM {
                 '.' => {
                     let mut buf = [0; 1];
                     buf[0] = self.data[self.dptr];
-                    stdout().write(&buf).unwrap();
+                    (self.output)().write(&buf).unwrap();
                     VMAction::Ok
                 }
                 ',' => {
                     let mut buf = [0; 1];
-                    stdin().take(1).read(&mut buf).unwrap();
+                    (self.input)().take(1).read(&mut buf).unwrap();
                     self.data[self.dptr] = buf[0];
                     VMAction::Ok
                 }
