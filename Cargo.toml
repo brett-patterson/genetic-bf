@@ -4,3 +4,7 @@ version = "0.1.0"
 authors = ["Brett Patterson <brett.patterson@rice.edu>"]
 
 [dependencies]
+clap = "2.24.1"
+serde = "1.0.4"
+serde_derive = "1.0.4"
+serde_yaml = "0.7.0"
