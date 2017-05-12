@@ -1,3 +1,4 @@
+use std::u8;
 use std::io::{Read, Write};
 
 const DATA_SIZE: usize = 30000;
@@ -69,7 +70,11 @@ impl <I: Read, O: Write> VM<I, O> {
                 VMAction::JumpBackward => {
                     let mut count = 1;
                     while count > 0 {
-                        self.iptr -= 1;
+                        if self.iptr > 0 {
+                            self.iptr -= 1;
+                        } else {
+                            return VMResult::Error("No matching [")
+                        }
 
                         match self.prog.get(self.iptr) {
                             Some(byte) => {
@@ -103,20 +108,36 @@ impl <I: Read, O: Write> VM<I, O> {
         if let Some(byte) = self.prog.get(self.iptr) {
             match byte.clone() as char {
                 '>' => {
-                    self.dptr += 1;
-                    VMAction::Ok
+                    if self.dptr < DATA_SIZE - 1 {
+                        self.dptr += 1;
+                        VMAction::Ok
+                    } else {
+                        VMAction::Error("Data pointer moved out of bounds")
+                    }
                 }
                 '<' => {
-                    self.dptr -= 1;
-                    VMAction::Ok
+                    if self.dptr > 0 {
+                        self.dptr -= 1;
+                        VMAction::Ok
+                    } else {
+                        VMAction::Error("Data pointer < 0")
+                    }
                 }
                 '+' => {
-                    self.data[self.dptr] += 1;
-                    VMAction::Ok
+                    if self.data[self.dptr] < u8::MAX {
+                        self.data[self.dptr] += 1;
+                        VMAction::Ok
+                    } else {
+                        VMAction::Error("Data overflow")
+                    }
                 }
                 '-' => {
-                    self.data[self.dptr] -= 1;
-                    VMAction::Ok
+                    if self.data[self.dptr] > 0 {
+                        self.data[self.dptr] -= 1;
+                        VMAction::Ok
+                    } else {
+                        VMAction::Error("Data underflow")
+                    }
                 }
                 '.' => {
                     let mut buf = [0; 1];

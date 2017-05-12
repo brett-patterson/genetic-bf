@@ -51,8 +51,7 @@ impl ProgGen {
                 
                 let mut vm = VM::new(prog, rule.input.as_bytes(), actual.by_ref());
                 match vm.run() {
-                    VMResult::Error(e) => {
-                        println!("{}", e);
+                    VMResult::Error(_) => {
                         score = f32::MAX;
                         continue;
                     },
@@ -74,8 +73,10 @@ impl ProgGen {
     }
 
     fn mutate(&mut self) {
-        match self.rng.gen_range(0, 1) {
+        match self.rng.gen_range(0, 3) {
             0 => self.mutate_insert(),
+            1 => self.mutate_change(),
+            2 => self.mutate_delete(),
             _ => {}
         }
     }
@@ -84,6 +85,26 @@ impl ProgGen {
         let idx = self.rng.gen_range(0, self.prog.len() + 1);
         let op = self.random_op();
         self.prog.insert(idx, op);
+    }
+
+    fn mutate_change(&mut self) {
+        if self.prog.len() > 0 {
+            let idx = self.rng.gen_range(0, self.prog.len());
+            let op = self.random_op();
+            self.prog.insert(idx, op);
+            self.prog.remove(idx + 1);
+        }
+    }
+
+    fn mutate_delete(&mut self) {
+        if self.prog.len() > 1 {
+            let idx = self.rng.gen_range(0, self.prog.len());
+            if idx == self.prog.len() - 1 {
+                self.prog.pop();
+            } else {
+                self.prog.remove(idx);
+            }
+        }
     }
 
     fn random_op(&mut self) -> char {
